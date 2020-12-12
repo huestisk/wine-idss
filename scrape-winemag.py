@@ -56,6 +56,7 @@ class Scraper:
     def scrape_site(self):
         if self.clear_old_data:
             self.clear_data_dir()
+
         if self.multiprocessing:
             link_list = [
                 BASE_URL.format(page, self.year)
@@ -67,6 +68,7 @@ class Scraper:
         else:
             for page in range(self.pages_to_scrape[0], self.pages_to_scrape[1] + 1):
                 self.scrape_page(BASE_URL.format(page, self.year))
+
         print("Scrape finished...")
         self.condense_data()
 
@@ -369,6 +371,7 @@ if __name__ == "__main__":
     parser.add_argument("clear", type=bool, default=False, help="Clear old data")
 
     args = parser.parse_args()
+    
     # Total review results on their site are conflicting, hardcode as the max tested value for now
     winmag_scraper = Scraper(
         pages_to_scrape=args.pages,
