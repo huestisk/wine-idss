@@ -32,7 +32,7 @@ def testFunction(words, counts):
 def remove_stopwords(words, counts):
     # Stop words are common english words
     stops = set(stopwords.words("english"))
-
+    # Init outputs
     meaningful_words = []
     meaningful_counts = dict()
     # Save new struct
@@ -43,38 +43,30 @@ def remove_stopwords(words, counts):
 
     return meaningful_words, meaningful_counts
 
-def get_relations(words, counts):
-
+def get_relations_conceptnet(words, counts):
     # Stop words are common english words
     stops = set(stopwords.words("english"))
-
     # Get relations
     relations = dict()
     for word, count in zip(words, counts):
-
         # Filter common words
         if word in stops:
             continue
-
         # Get relations from web api
         url = 'http://api.conceptnet.io/c/en/' + str(word)
-
         try:
             obj = requests.get(url).json()
-
             # Save in struct
             nodes = [edge['end']['label'] for edge in obj['edges']]
             rels = [edge['rel']['label'] for edge in obj['edges']]
-
             relations[(word)] = (count, nodes, rels)
         except:
             print("There was an error for: \"" + str(word) + "\"")
-
     return relations
 
 # Test in Python first
 if __name__ == "__main__":
-    rels = get_relations(test_words[0:9], test_counts[0:9])
+    rels = get_relations_conceptnet(test_words[0:9], test_counts[0:9])
     print(rels['wine'][0])
 
 
