@@ -86,8 +86,15 @@ if __name__=="__main__":
   dfm = convert2dfm(final_tf_idf, num_reviews)
 
   # save to pickle
-  with open('data/dfm_words.p', 'wb') as fp:
+  with open('data/dfm.p', 'wb') as fp:
     pickle.dump(dfm, fp)
+
+  # create training data
+  labels = data[{'variety','price','points','province'}].copy()
+  
+  # save to pickle
+  with open('data/labels.p', 'wb') as fp:
+    pickle.dump(labels, fp)
 
 
   # try:

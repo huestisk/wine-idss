@@ -2,7 +2,8 @@
 .vscode
 data/*.csv
 data/*.json
-
+data/labels.p
+data/dfm_words.p
 
 # The template starts here
 
