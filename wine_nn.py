@@ -14,42 +14,59 @@ from sklearn.model_selection import train_test_split
 
 LABELS = "data/labels.p"
 TRAINING_DATA = "data/dfm_words.p"
-TARGETS = "variety"
-INPUT_SIZE = 500
-NUM_CLASSES = 707
+TARGETS = "province"
 
 class WineNN:
   
-  def __init__(self):
+  def __init__(self, targets):
 
+    self.targets = targets
     self.encoder = LabelEncoder()
+    self.input_size = None
+    self.num_classes = None
+
+    # training data
+    self.X_train = self.X_test = self.y_train = self.y_test = []
 
     try:
-
       # load model
-      self.model = keras.models.load_model("output/model_" + TARGETS)
+      self.model = keras.models.load_model("output/model_" + self.targets)
+      self.input_size = self.model.layers[0].input_shape[1]
+
+      # load labels
+      with open ("data/labels.p", 'rb') as fp:
+        tmp_labels = pickle.load(fp)
+        nan_idx = tmp_labels[self.targets].isnull()
+
+      # convert to array and remove nan
+      tmp_labels = tmp_labels.loc[nan_idx==0][self.targets]
+
+      # convert to onehot
+      self.encoder.fit(tmp_labels.values)
+
+      # set trained
       self.trained = True
 
-      # load label names
-      with open ("output/labels_" + TARGETS + ".p", 'rb') as fp:
-        self.label_names = pickle.load(fp)
-
     except:
-      # make model - SVM
       self.trained = False
-      self.model = Sequential()
-      self.model.add(Dense(300, input_dim=INPUT_SIZE, activation='relu'))
-      self.model.add(Dropout(0.2))
-      self.model.add(Dense(300, activation='relu'))
-      self.model.add(Dropout(0.2))
-      self.model.add(Dense(NUM_CLASSES, activation='softmax'))
 
-      # compile
-      self.model.compile(optimizer='adam',
-                        loss='categorical_crossentropy',
-                        metrics=['accuracy'])
-      # training data
-      self.X_train = self.X_test = self.y_train = self.y_test = []
+
+  def create_model(self):
+    
+    self.trained = False
+
+    # make model - SVM
+    self.model = Sequential()
+    self.model.add(Dense(300, input_dim=self.input_size, activation='relu'))
+    self.model.add(Dropout(0.2))
+    self.model.add(Dense(300, activation='relu'))
+    self.model.add(Dropout(0.2))
+    self.model.add(Dense(self.num_classes, activation='softmax'))
+
+    # compile
+    self.model.compile(optimizer='adam',
+                      loss='categorical_crossentropy',
+                      metrics=['accuracy'])
       
 
   def load_data(self, data_path, label_path):
@@ -65,10 +82,10 @@ class WineNN:
       # load labels
       with open (label_path, 'rb') as fp:
         tmp_labels = pickle.load(fp)
-        nan_idx = tmp_labels[TARGETS].isnull()
+        nan_idx = tmp_labels[self.targets].isnull()
 
       # convert to array and remove nan
-      tmp_labels = tmp_labels.loc[nan_idx==0][TARGETS]
+      tmp_labels = tmp_labels.loc[nan_idx==0][self.targets]
       X = (tmp_data.values)[nan_idx==0]
 
       # convert to onehot
@@ -76,6 +93,9 @@ class WineNN:
       encoded_y = self.encoder.transform(tmp_labels.values)
 
       y = keras.utils.to_categorical(encoded_y)
+
+      self.input_size = X.shape[1]
+      self.num_classes = y.shape[1]
 
       # split data
       self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.33)
@@ -108,21 +128,23 @@ class WineNN:
     if not self.trained:
       raise Exception("Model not trained.")
 
-    input_features = features.reshape(1,INPUT_SIZE)
+    input_features = features.reshape(1, self.input_size)
     prediction = self.model.predict(input_features)
 
-    return self.label_names[np.argmax(prediction)]
+    return self.encoder.inverse_transform([np.argmax(prediction)])[0]
 
 
 if __name__=="__main__":
   
-  model = WineNN()
+  model = WineNN(TARGETS)
 
   if not model.trained:
+
     # load data
     model.load_data(TRAINING_DATA, LABELS)
 
     # train model
+    model.create_model()
     model.train(verbose=True)
 
     # save

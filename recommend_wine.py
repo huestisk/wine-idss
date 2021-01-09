@@ -23,7 +23,8 @@ class WineRecommender:
 
   def __init__(self, input_text):
     self.input_text = self.convert_text(input_text)
-    self.model = WineNN()
+    self.variety_model = WineNN("variety")
+    self.province_model = WineNN("province")
 
   def clean_sentences(self, sentence):
     cleaned_sentence = []
@@ -51,8 +52,8 @@ class WineRecommender:
   
     # load dictionaries
     try:
-      with open('output/tfidf_dict.p', 'rb') as fp:
-        tf_idf = pickle.load(fp)
+      # with open('output/tfidf_dict.p', 'rb') as fp:
+      #   tf_idf = pickle.load(fp)
 
       with open('output/feature_dict.p', 'rb') as fp:
         feature_dict = pickle.load(fp)
@@ -70,11 +71,7 @@ class WineRecommender:
         # Alternative: count
         features[idx] += 1
 
-
     return features
-
-  def predict(self, features):
-    return self.model.predict(features)
     
 
 if __name__=="__main__":
@@ -85,7 +82,8 @@ if __name__=="__main__":
 
   features = wine_recommender.get_features()
 
-  prediction = wine_recommender.predict(features)
+  variety = wine_recommender.variety_model.predict(features)
+  province = wine_recommender.province_model.predict(features)
 
-  print("\nThe predicted variety is " + prediction)
+  print("\nThe predicted variety is " + variety + " and the predicted province is " + province + ".")
 
