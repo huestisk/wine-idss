@@ -173,4 +173,18 @@ if __name__=="__main__":
       pickle.dump(tfidf_bigrams, fp)
 
 
+  """ Convert to dict """
+  flattened = [i for word in tfidf_words for i in word]
+  words = flattened[::3]
+  values = flattened[1::3]
+
+  tf_idf_dict = dict()
+  for idx, word in enumerate(words):
+    tf_idf_dict[word] = values[idx]
+
+  # save to pickle
+  with open('output/tfidf_dict.p', 'wb') as fp:
+    pickle.dump(tf_idf_dict, fp)  
+
+
 

@@ -25,11 +25,15 @@ class WineNN:
       self.model = keras.models.load_model("output/model_" + TARGETS)
       self.trained = True
 
+      # load label names
+      with open ("output/labels_" + TARGETS + ".p", 'rb') as fp:
+        self.label_names = pickle.load(fp)
+
     except:
       # make model - SVM
       self.trained = False
       self.model = Sequential()
-      self.model.add(Dense(INPUT_SIZE, activation='relu'))
+      self.model.add(Dense(32, activation='relu'))
       self.model.add(Dense(1, kernel_regularizer=l2(0.01)))
       self.model.add(Activation('softmax'))
 
@@ -61,6 +65,9 @@ class WineNN:
       onehot = pd.get_dummies(tmp_labels)
       self.label_names = onehot.columns
 
+      # with open("output/labels_" + TARGETS + ".p", 'wb') as fp:
+      #   pickle.dump(onehot.columns, fp)
+
       X = (tmp_data.values)[nan_idx==0]
       y = onehot.values
 
@@ -88,14 +95,17 @@ class WineNN:
     results = self.model.evaluate(self.X_test, self.y_test, batch_size=128)
     print("test loss, test acc:", results)
 
-
   def save(self, file_path):
     self.model.save(file_path)
 
-
   def predict(self, features):
-    if self.trained:
-      return self.model.predict(features)
+    if not self.trained:
+      raise Exception("Model not trained.")
+
+    input_features = features.reshape(1,INPUT_SIZE)
+    prediction = self.model.predict(input_features)
+
+    return self.label_names[int(prediction[0,0])]
 
 
 if __name__=="__main__":
@@ -112,6 +122,6 @@ if __name__=="__main__":
     # save
     model.save("output/model_" + TARGETS)
 
-  # use model to predict
-  features = []
+  # # use model to predict
+  # features = []
   # prediction = model.predict(features)
