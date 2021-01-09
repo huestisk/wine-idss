@@ -1,26 +1,31 @@
 """Train Neural Network"""
 
 import pandas as pd
+import numpy as np
 import pickle
 
 import keras
 from keras.regularizers import l2
 from keras.models import Sequential
-from keras.layers import Dense
-from keras.layers import Activation
+from keras.layers import Dense, Dropout
 
+from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 
 LABELS = "data/labels.p"
 TRAINING_DATA = "data/dfm_words.p"
 TARGETS = "variety"
 INPUT_SIZE = 500
+NUM_CLASSES = 707
 
 class WineNN:
   
   def __init__(self):
 
+    self.encoder = LabelEncoder()
+
     try:
+
       # load model
       self.model = keras.models.load_model("output/model_" + TARGETS)
       self.trained = True
@@ -33,13 +38,15 @@ class WineNN:
       # make model - SVM
       self.trained = False
       self.model = Sequential()
-      self.model.add(Dense(32, activation='relu'))
-      self.model.add(Dense(1, kernel_regularizer=l2(0.01)))
-      self.model.add(Activation('softmax'))
+      self.model.add(Dense(300, input_dim=INPUT_SIZE, activation='relu'))
+      self.model.add(Dropout(0.2))
+      self.model.add(Dense(300, activation='relu'))
+      self.model.add(Dropout(0.2))
+      self.model.add(Dense(NUM_CLASSES, activation='softmax'))
 
       # compile
-      self.model.compile(loss='squared_hinge',
-                        optimizer='adadelta',
+      self.model.compile(optimizer='adam',
+                        loss='categorical_crossentropy',
                         metrics=['accuracy'])
       # training data
       self.X_train = self.X_test = self.y_train = self.y_test = []
@@ -62,14 +69,13 @@ class WineNN:
 
       # convert to array and remove nan
       tmp_labels = tmp_labels.loc[nan_idx==0][TARGETS]
-      onehot = pd.get_dummies(tmp_labels)
-      self.label_names = onehot.columns
-
-      # with open("output/labels_" + TARGETS + ".p", 'wb') as fp:
-      #   pickle.dump(onehot.columns, fp)
-
       X = (tmp_data.values)[nan_idx==0]
-      y = onehot.values
+
+      # convert to onehot
+      self.encoder.fit(tmp_labels.values)
+      encoded_y = self.encoder.transform(tmp_labels.values)
+
+      y = keras.utils.to_categorical(encoded_y)
 
       # split data
       self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.33)
@@ -92,7 +98,7 @@ class WineNN:
 
     self.trained = True
 
-    results = self.model.evaluate(self.X_test, self.y_test, batch_size=128)
+    results = self.model.evaluate(self.X_test, self.y_test, batch_size=64)
     print("test loss, test acc:", results)
 
   def save(self, file_path):
@@ -105,7 +111,7 @@ class WineNN:
     input_features = features.reshape(1,INPUT_SIZE)
     prediction = self.model.predict(input_features)
 
-    return self.label_names[int(prediction[0,0])]
+    return self.label_names[np.argmax(prediction)]
 
 
 if __name__=="__main__":

@@ -49,7 +49,7 @@ class WineRecommender:
 
   def get_features(self):
   
-    # load tfidf
+    # load dictionaries
     try:
       with open('output/tfidf_dict.p', 'rb') as fp:
         tf_idf = pickle.load(fp)
@@ -65,7 +65,11 @@ class WineRecommender:
     for word in self.input_text:
       if word in feature_dict:
         idx = feature_dict[word]
-        features[idx] += tf_idf[word]
+        # Add tf_idf value
+        # features[idx] += tf_idf[word]
+        # Alternative: count
+        features[idx] += 1
+
 
     return features
 

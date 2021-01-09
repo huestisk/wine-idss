@@ -59,7 +59,10 @@ def convert2dfm(tf_idf, length):
 
   for idx in range(len(tf_idf)):
     for doc in tf_idf[idx,2]:
-      dfm[doc, idx] += tf_idf[idx,1]
+      # Add tf_idf value
+      # dfm[doc, idx] += tf_idf[idx,1]
+      # Alternative: count
+      dfm[doc, idx] += 1
 
   return pd.DataFrame(data=dfm, columns=columns)
 
@@ -89,12 +92,12 @@ if __name__=="__main__":
   with open('data/dfm.p', 'wb') as fp:
     pickle.dump(dfm, fp)
 
-  # create training data
-  labels = data[{'variety','price','points','province'}].copy()
+  # # get labels
+  # labels = data[{'variety','price','points','province'}].copy()
   
-  # save to pickle
-  with open('data/labels.p', 'wb') as fp:
-    pickle.dump(labels, fp)
+  # # save to pickle
+  # with open('data/labels.p', 'wb') as fp:
+  #   pickle.dump(labels, fp)
 
 
   # try:
