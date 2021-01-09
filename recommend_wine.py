@@ -16,15 +16,22 @@ stops = set(stopwords.words("english"))
 # nltk.download('punkt') # TODO: uncomment if not downloaded
 tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
 
-INPUT_SIZE = 500
 TEST = "The wine should be an oaky white wine from the south of France. Preferably, with an amora of cherry and cat's pee."
+MAX_PRICE = 100
 
 class WineRecommender:
 
-  def __init__(self, input_text):
+  def __init__(self, input_text, data):
+
     self.input_text = self.convert_text(input_text)
+    self.data = data
+
     self.variety_model = WineNN("variety")
     self.province_model = WineNN("province")
+    
+    self.features = self.get_features()
+    self.max_price = MAX_PRICE
+  
 
   def clean_sentences(self, sentence):
     cleaned_sentence = []
@@ -73,17 +80,33 @@ class WineRecommender:
 
     return features
     
+  def recommend(self):
+    variety = self.variety_model.predict(self.features)
+    province = self.province_model.predict(self.features)
+
+    print("\nThe predicted variety is " + variety + " and the predicted province is " + province + ".\n")
+
+    # filter dataframe
+    filters = (self.data["variety"] == variety) & \
+              (self.data["province"] == province) & (self.data["price"] < self.max_price)
+
+    filtered_wines = self.data.loc[filters]
+
+    # sort
+    filtered_wines = filtered_wines.sort_values(by='points')
+
+    return filtered_wines['title'].iloc[0]
+
 
 if __name__=="__main__":
+
+  # load data
+  data = pd.read_csv('data/winemag-data-130k-v2.csv')
   
-  wine_recommender = WineRecommender(TEST)
+  wine_recommender = WineRecommender(TEST, data)
 
-  print(wine_recommender.input_text)
+  wine = wine_recommender.recommend()
 
-  features = wine_recommender.get_features()
+  print("You should try the wine " + wine)
 
-  variety = wine_recommender.variety_model.predict(features)
-  province = wine_recommender.province_model.predict(features)
-
-  print("\nThe predicted variety is " + variety + " and the predicted province is " + province + ".")
 
