@@ -47,7 +47,7 @@ def get_sentences(reviews):
   return sentences
 
 
-def proprocess_reviews(reviews, wine2vec):
+def preprocess_reviews(reviews, wine2vec):
   # load conversion map
   try:
     with open ('data/conversion_map.p', 'rb') as fp:
@@ -138,7 +138,7 @@ if __name__=="__main__":
   except:
     # bigrams
     wine2vec = Wine2Vec()
-    words, bigrams = proprocess_reviews(reviews, wine2vec)
+    words, bigrams = preprocess_reviews(reviews, wine2vec)
 
     # save words
     with open('data/words.p', 'wb') as fp:

@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split
 
 LABELS = "data/labels.p"
 TRAINING_DATA = "data/dfm_words.p"
-TARGETS = "province"
+TARGETS = "variety"
 
 class WineNN:
   
@@ -33,13 +33,8 @@ class WineNN:
       self.model = keras.models.load_model("output/model_" + self.targets)
       self.input_size = self.model.layers[0].input_shape[1]
 
-      # # create image
-      # with open('images/model_' + self.targets + '.png', 'wb') as fp:
-      #   pass
-
-      # keras.utils.plot_model(self.model, 
-      #   to_file='images/model_' + self.targets + '.png', 
-      #   show_shapes=True)
+      # create image
+      # keras.utils.plot_model(self.model, to_file='images/model.png', show_shapes=True)
 
       # load labels
       with open ("data/labels.p", 'rb') as fp:
@@ -66,6 +61,14 @@ class WineNN:
     # make model
     self.model = Sequential()
     self.model.add(Dense(500, input_dim=self.input_size, activation='relu'))
+    self.model.add(Dropout(0.2))
+    self.model.add(Dense(300, activation='sigmoid'))
+    self.model.add(Dropout(0.2))
+    self.model.add(Dense(250, activation='relu'))
+    self.model.add(Dropout(0.2))
+    self.model.add(Dense(150, activation='sigmoid'))
+    self.model.add(Dropout(0.2))
+    self.model.add(Dense(250, activation='relu'))
     self.model.add(Dropout(0.2))
     self.model.add(Dense(300, activation='sigmoid'))
     self.model.add(Dropout(0.2))
