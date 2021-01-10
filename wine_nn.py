@@ -131,7 +131,7 @@ class WineNN:
     input_features = features.reshape(1, self.input_size)
     prediction = self.model.predict(input_features)
 
-    return self.encoder.inverse_transform([np.argmax(prediction)])[0]
+    return [self.encoder.classes_, prediction]# self.encoder.inverse_transform([np.argmax(prediction)])[0]
 
 
 if __name__=="__main__":
