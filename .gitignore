@@ -4,6 +4,7 @@ data/*.csv
 data/*.json
 data/labels.p
 data/dfm_words*
+output/*_bak
 
 # The template starts here
 

@@ -1,7 +1,7 @@
 """Train Neural Network"""
-
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 import pickle
 
 import keras
@@ -33,6 +33,14 @@ class WineNN:
       self.model = keras.models.load_model("output/model_" + self.targets)
       self.input_size = self.model.layers[0].input_shape[1]
 
+      # # create image
+      # with open('images/model_' + self.targets + '.png', 'wb') as fp:
+      #   pass
+
+      # keras.utils.plot_model(self.model, 
+      #   to_file='images/model_' + self.targets + '.png', 
+      #   show_shapes=True)
+
       # load labels
       with open ("data/labels.p", 'rb') as fp:
         tmp_labels = pickle.load(fp)
@@ -55,11 +63,13 @@ class WineNN:
     
     self.trained = False
 
-    # make model - SVM
+    # make model
     self.model = Sequential()
-    self.model.add(Dense(300, input_dim=self.input_size, activation='relu'))
+    self.model.add(Dense(500, input_dim=self.input_size, activation='relu'))
     self.model.add(Dropout(0.2))
-    self.model.add(Dense(300, activation='relu'))
+    self.model.add(Dense(300, activation='sigmoid'))
+    self.model.add(Dropout(0.2))
+    self.model.add(Dense(500, activation='relu'))
     self.model.add(Dropout(0.2))
     self.model.add(Dense(self.num_classes, activation='softmax'))
 
@@ -108,11 +118,13 @@ class WineNN:
     if self.trained:
       return
 
-    self.model.fit(
+    history = self.model.fit(
         self.X_train, 
         self.y_train,
         batch_size=64,
-        epochs=20,
+        epochs=25,
+        validation_split=0.2,
+        use_multiprocessing=True,
         verbose=verbose
       )
 
@@ -120,6 +132,29 @@ class WineNN:
 
     results = self.model.evaluate(self.X_test, self.y_test, batch_size=64)
     print("test loss, test acc:", results)
+
+    if verbose:
+      self.plot_history(history)
+
+  def plot_history(self, history):
+
+    # summarize history for accuracy
+    plt.plot(history.history['accuracy'])
+    plt.plot(history.history['val_accuracy'])
+    plt.title('model accuracy')
+    plt.ylabel('accuracy')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'validation'])
+    plt.show()
+
+    # summarize history for loss
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('model loss')
+    plt.ylabel('loss')
+    plt.xlabel('epoch')
+    plt.legend(['train', 'validation'])
+    plt.show()
 
   def save(self, file_path):
     self.model.save(file_path)
@@ -131,7 +166,8 @@ class WineNN:
     input_features = features.reshape(1, self.input_size)
     prediction = self.model.predict(input_features)
 
-    return self.encoder.inverse_transform([np.argmax(prediction)])[0]
+    # return self.encoder.inverse_transform([np.argmax(prediction)])[0]
+    return [self.encoder.classes_, prediction]
 
 
 if __name__=="__main__":
