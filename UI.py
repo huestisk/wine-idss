@@ -3,23 +3,32 @@ import numpy as np
 import pandas as pd
 import time
 
-st.title('Wine recommendation Decision Support System')
+from recommend_wine import WineRecommender
 
+# Wine Recommender Class
+data = pd.read_csv('data/winemag-data-130k-v2.csv')
+wine_recommender = WineRecommender(data)
+
+# Streamlit app
+st.title('Wine recommendation Decision Support System')
 st.write("**Short introduction to the IDSS**")
 user_input = st.text_input('Describe your favorite wine')
 price_range = st.slider(
     'What is your price range ?',
     4.0, 3300.0, (0.0, 3300.0))
 st.write('Price range:', price_range)
-if st.button('Run'):    
-    result = pd.DataFrame(
-        np.random.randn(10, 5),
-        columns=('col %d' % i for i in range(5)))
+
+if st.button('Run'):
+
+    wine_recommender.set_input_text(user_input)
+    wine_recommender.set_max_price(price_range[1])
+
     my_bar = st.progress(0)
     with st.spinner('Running...'):
-        for percent_complete in range(100):
-            time.sleep(0.1)
-            my_bar.progress(percent_complete + 1)
+        result = wine_recommender.recommend()
+
     st.success('Done!')
     st.write('Here is a collection of similar wines:')
-    st.table(result)
+    
+    st.table(result.assign(hack='').set_index('hack'))
+    # st.table(result)

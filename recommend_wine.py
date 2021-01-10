@@ -21,17 +21,23 @@ MAX_PRICE = 100
 
 class WineRecommender:
 
-  def __init__(self, input_text, data):
+  def __init__(self, data):
 
-    self.input_text = self.convert_text(input_text)
     self.data = data
 
     self.variety_model = WineNN("variety")
     self.province_model = WineNN("province")
-    
+
+    self.input_text = None    
+    self.features = None
+    self.max_price = None
+
+  def set_input_text(self, input_text):
+    self.input_text = self.convert_text(input_text)
     self.features = self.get_features()
-    self.max_price = MAX_PRICE
-  
+
+  def set_max_price(self, max_price):
+    self.max_price = max_price
 
   def clean_sentences(self, sentence):
     cleaned_sentence = []
@@ -81,10 +87,13 @@ class WineRecommender:
     return features
     
   def recommend(self):
+    if self.features is None:
+      raise Exception("There is not input text.")
+
     variety = self.variety_model.predict(self.features)
     province = self.province_model.predict(self.features)
 
-    print("\nThe predicted variety is " + variety + " and the predicted province is " + province + ".\n")
+    # print("\nThe predicted variety is " + variety + " and the predicted province is " + province + ".\n")
 
     # filter dataframe
     filters = (self.data["variety"] == variety) & \
@@ -95,7 +104,8 @@ class WineRecommender:
     # sort
     filtered_wines = filtered_wines.sort_values(by='points')
 
-    return filtered_wines['title'].iloc[0]
+    # return filtered_wines['title'].iloc[0]
+    return filtered_wines[{"title", "price", "variety", "country", "province"}]
 
 
 if __name__=="__main__":
@@ -103,10 +113,14 @@ if __name__=="__main__":
   # load data
   data = pd.read_csv('data/winemag-data-130k-v2.csv')
   
-  wine_recommender = WineRecommender(TEST, data)
+  wine_recommender = WineRecommender(data)
 
-  wine = wine_recommender.recommend()
+  wine_recommender.set_input_text(TEST)
 
-  print("You should try the wine " + wine)
+  wine_recommender.set_max_price(MAX_PRICE)
+
+  wines = wine_recommender.recommend()
+
+  print("You should try the wine " + wines['title'].iloc[0])
 
 
