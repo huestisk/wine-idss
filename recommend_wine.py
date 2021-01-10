@@ -8,6 +8,9 @@ import nltk
 from nltk.corpus import stopwords
 from combine_by_stem import replace_by_common_descriptors
 
+
+from sentence_transformers import SentenceTransformer, util
+
 from wine_nn import WineNN
 
 # nltk.download('stopwords') # TODO: uncomment if not downloaded
@@ -22,8 +25,7 @@ TEST = "The wine should be an oaky white wine from the south of France. Preferab
 class WineRecommender:
 
   def __init__(self, data):
-
-    self.data = data
+    self.data = data#.dropna(subset=['variety' , 'province', 'points', 'price'])
 
     self.variety_model = WineNN("variety")
     self.province_model = WineNN("province")
@@ -86,29 +88,64 @@ class WineRecommender:
 
     return features
     
+  
   def recommend(self):
     if self.features is None:
       raise Exception("There is not input text.")
 
-    variety = self.variety_model.predict(self.features)
-    province = self.province_model.predict(self.features)
+    [varieties, probs_var] = self.variety_model.predict(self.features)
+    [provinces, probs_province] = self.province_model.predict(self.features)
+    provinces=list(provinces)
+    varieties=list(varieties)
+    probs_var=list(probs_var[0])
+    probs_province=list(probs_province[0])
+    # Assume that we return list of probabilities
+    # weightsvar * weightsprov * sim * poits normalized (filtered by price)
+    def assign_val(r):
+      assert len(probs_var) == len(probs_var)
+      try:
+        ind_var = varieties.index(str(r['variety'])) # np.where(varieties == r['variety'])
+        probvar = probs_var[ind_var]
+        ind_prov = provinces.index(str(r['province'])) #np.where(provinces == r['province'])
+        probprov = probs_province[ind_prov]
+      except:
+        print(f"pb with finding {r['variety']} or {r['province']}")
+        return -1
+      p = (r['points'] - 80 + 1) /21
+      
+      if r['price'] > self.max_price:
+        return 0
+      # compute sims values
+      
+      val = probvar*probprov * (p)
+      print(f"{val=} for {r['variety']} or {r['province']}")
+      return val
+    
 
     # print("\nThe predicted variety is " + variety + " and the predicted province is " + province + ".\n")
 
     # filter dataframe
-    filters = (self.data["variety"] == variety) & \
-              (self.data["province"] == province) & \
-              (self.data["price"] >= self.price_range[0]) & \
-              (self.data["price"] <= self.price_range[1])
+    # filters = (self.data["variety"] == variety) & \
+    #           (self.data["province"] == province) & \
+    #           (self.data["price"] >= self.price_range[0]) & \
+    #           (self.data["price"] <= self.price_range[1])
 
+    # # sort
+    # filtered_wines = filtered_wines.sort_values(by='points')
 
-    filtered_wines = self.data.loc[filters]
+    # # return filtered_wines['title'].iloc[0]
 
-    # sort
-    filtered_wines = filtered_wines.sort_values(by='points')
+    self.data["val"] = self.data.apply(assign_val, axis=1)
+    vc = self.data["val"].value_counts()
+    missings = vc[-1]/len(self.data["val"])
+    
+    print(missings)
+    
+    filtered_wines = self.data.sort_values(by='val')
 
-    # return filtered_wines['title'].iloc[0]
-    return filtered_wines[{"title", "price", "variety", "country", "province"}]
+    return filtered_wines[{"title", "price", "variety", "country", "province"}].iloc[:10]
+
+    
 
 
 if __name__=="__main__":
@@ -124,6 +161,6 @@ if __name__=="__main__":
 
   wines = wine_recommender.recommend()
 
-  print("You should try the wine " + wines['title'].iloc[0])
+  print("You should try the wines " + wines['title'])
 
 
