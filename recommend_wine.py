@@ -16,8 +16,8 @@ stops = set(stopwords.words("english"))
 # nltk.download('punkt') # TODO: uncomment if not downloaded
 tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
 
+PRICE_RANGE = [0, 100]
 TEST = "The wine should be an oaky white wine from the south of France. Preferably, with an amora of cherry and cat's pee."
-MAX_PRICE = 100
 
 class WineRecommender:
 
@@ -30,14 +30,14 @@ class WineRecommender:
 
     self.input_text = None    
     self.features = None
-    self.max_price = None
+    self.price_range = None
 
   def set_input_text(self, input_text):
     self.input_text = self.convert_text(input_text)
     self.features = self.get_features()
 
-  def set_max_price(self, max_price):
-    self.max_price = max_price
+  def set_price_range(self, price_range):
+    self.price_range = price_range
 
   def clean_sentences(self, sentence):
     cleaned_sentence = []
@@ -97,7 +97,10 @@ class WineRecommender:
 
     # filter dataframe
     filters = (self.data["variety"] == variety) & \
-              (self.data["province"] == province) & (self.data["price"] < self.max_price)
+              (self.data["province"] == province) & \
+              (self.data["price"] >= self.price_range[0]) & \
+              (self.data["price"] <= self.price_range[1])
+
 
     filtered_wines = self.data.loc[filters]
 
@@ -117,7 +120,7 @@ if __name__=="__main__":
 
   wine_recommender.set_input_text(TEST)
 
-  wine_recommender.set_max_price(MAX_PRICE)
+  wine_recommender.set_price_range(PRICE_RANGE)
 
   wines = wine_recommender.recommend()
 
