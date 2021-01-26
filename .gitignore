@@ -5,6 +5,7 @@ data/*.json
 data/labels.p
 data/dfm_words*
 output/*_bak
+*.pkl
 
 # The template starts here
 
