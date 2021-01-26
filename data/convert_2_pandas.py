@@ -1,25 +1,25 @@
 import pandas as pd
 
-df1 = pd.read_json('database/winemag-data-130k-v2.json')
-print(df1.shape)
+# Read JSON files
+df1 = pd.read_json('data/winemag-data-130k-v2.json')
+df2 = pd.read_json('data/winemag-data-newest-46500.json')
+df3 = pd.read_json('data/winemag-data-next-39492.json')
 
-df1.drop_duplicates(keep=False,inplace=True)
-print(df1.shape)
-
+# Remove unnecessary columns
 del df1['taster_name']
 del df1['taster_twitter_handle']
 
-df2 = pd.read_json('database/winemag-data-newest-46500.json')
-print(df2.shape)
-df3 = pd.read_json('database/winemag-data-next-39492.json')
-print(df3.shape)
+# Concatenate
+df = pd.concat([df2, df3, df1])
+total_len = df.shape[0]
 
-df = pd.concat([df1, df2, df3])
-print(df.shape)
+# Quick Analysis
+print("There are " + str(len(df['description'].unique())) + " unique descriptions.")
+print("There are " + str(len(df['title'].unique())) + " unique titles.")
 
-df.drop_duplicates(keep=False, inplace=True)
-print(df.shape)
+# Remove duplicates
+df.drop_duplicates(keep='last', inplace=True)
+print("A total of " + str(total_len) + " reviews were scraped, " + str(df.shape[0]) + " were non-duplicates.")
 
-df.to_pickle("./database.pkl")
-
-# print(str(df["price"].isna().sum()) + " / " + str(len(df)))
+# Save
+df.to_pickle("data/data.pkl")
