@@ -17,8 +17,9 @@ HEADERS = {
         "(KHTML, like Gecko) Chrome/48.0.2564.109 Safari/537.36"
     )
 }
-DATA_DIR = "data"
-FILENAME = "winemag-data"
+
+FILENAME = "data/winemag-data"
+URLFILENAME = "data/review_urls.pkl"
 
 UNKNOWN_FORMAT = 0
 APPELLATION_FORMAT_0 = 1
@@ -70,7 +71,7 @@ class Scraper:
             
             time.sleep(15)
             print("Finished with year " + str(year) + "!")
-            with open("review_urls.p", "wb") as f:
+            with open(URLFILENAME, "wb") as f:
                 pickle.dump(self.all_review_urls, f)
 
         return self.all_review_urls            
@@ -89,7 +90,7 @@ class Scraper:
                 nulls += 1
 
         if nulls > 10:
-            with open("review_urls.p", "wb") as f:
+            with open(URLFILENAME, "wb") as f:
                 pickle.dump(self.all_review_urls, f)
             raise Exception("No more urls are being parsed...")
 
@@ -339,13 +340,13 @@ if __name__ == "__main__":
 
     # Step 1: scrape review urls
     try:
-        with open("review_urls.p", "rb") as f:
+        with open(URLFILENAME, "rb") as f:
             review_urls = pickle.load(f)
         # review_urls = winmag_scraper.scrape_site_for_urls(review_urls)
     except:
         review_urls = winmag_scraper.scrape_site_for_urls()
     
-    # with open("review_urls.p", "wb") as f:
+    # with open(URLFILENAME, "wb") as f:
     #     pickle.dump(review_urls, f)
 
     print("There were " + str(len(review_urls)) + " review urls found.")
@@ -353,6 +354,8 @@ if __name__ == "__main__":
     # Step 2: scrape data
     winmag_scraper.scrape_reviews(review_urls)
     print("Scrape Data finished...")
+
+    # TODO: Only 85992 of 98700 have been scraped, but large possibility of duplicate values
 
 
   

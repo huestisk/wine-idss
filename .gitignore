@@ -6,6 +6,7 @@ data/labels.p
 data/dfm_words*
 output/*_bak
 *.pkl
+archive/
 
 # The template starts here
 

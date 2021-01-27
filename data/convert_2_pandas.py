@@ -3,7 +3,7 @@ import pandas as pd
 # Read JSON files
 df1 = pd.read_json('data/winemag-data-130k-v2.json')
 df2 = pd.read_json('data/winemag-data-newest-46500.json')
-df3 = pd.read_json('data/winemag-data-next-39492.json')
+df3 = pd.read_json('data/winemag-data-next-51350.json')
 
 # Remove unnecessary columns
 del df1['taster_name']
