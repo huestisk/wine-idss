@@ -1,3 +1,4 @@
+from nltk.featstruct import Feature
 import numpy as np
 import pandas as pd
 
@@ -6,9 +7,9 @@ import pickle
 import nltk
 from nltk.corpus import stopwords
 
-from combine_by_stem import replace_by_common_descriptors
+from preprocessing.combine_by_stem import replace_by_common_descriptors
 
-MAX_IDX = 750
+MAX_IDX = 1000
 
 #  stopwords (common english words) # nltk.download('stopwords')
 stops = set(stopwords.words("english"))
@@ -116,6 +117,21 @@ def convert2dfm(tf_idf, length):
             dfm[doc, idx] += 1
     return pd.DataFrame(data=dfm, columns=columns)
 
+def preprocess_input(description):
+    pass
+    sentences = tokenizer.tokenize(description)
+    cleaned_sentences = [re.sub("[^a-zA-Z']"," ", sentence) for sentence in sentences]
+    wordlists, bigrams = bigrams_from_descriptions((cleaned_sentences,))
+    full_list = wordlists[0] + bigrams[0]
+
+    # convert to features
+    with open('preprocessing/feature_names.pkl','rb') as fb:
+        feature_names = pickle.load(fb)
+    features = [full_list.count(name) for name in feature_names]
+
+    return np.array(features)
+
+
 if __name__ == "__main__":
 
     # Load data
@@ -132,7 +148,7 @@ if __name__ == "__main__":
         with open('preprocessing/bigrams.p', 'rb') as fp:
             bigrams = pickle.load(fp)
     except:
-        print("Wordlists and Bigrams could not be loaded.")
+        print("Wordlists and Bigrams could not be loaded. Recomputing...")
 
         # tokenize
         raw_descriptions = [tokenizer.tokenize(description) for description in descriptions]
@@ -159,6 +175,8 @@ if __name__ == "__main__":
         with open('preprocessing/tfidf_bigrams.p', 'rb') as fp:
             tfidf_bigrams = pickle.load(fp)
     except:
+        print("TF-IDF for Wordlists and Bigrams could not be loaded. Recomputing...")
+
         tfidf_words = compute_tf_idf(convert2dict(wordlists), num_reviews)
         print("Done with TF-IDF for words.")
 
@@ -173,11 +191,21 @@ if __name__ == "__main__":
             pickle.dump(tfidf_bigrams, fp)
 
     """ Create Features """
-    top_features = get_top_features(tfidf_words, tfidf_bigrams)
-    dfm = convert2dfm(top_features, num_reviews)
+    try:
+        with open('data/dfm.pkl', 'rb') as fp:
+            dfm = pickle.load(fp)
+    except:
+        print("DFM could not be loaded. Recomputing...")
 
-    # save
-    with open('data/dfm.pkl', 'wb') as fp:
-        pickle.dump(dfm, fp)
+        top_features = get_top_features(tfidf_words, tfidf_bigrams)
+        dfm = convert2dfm(top_features, num_reviews)
 
+        # save
+        with open('data/dfm.pkl', 'wb') as fp:
+            pickle.dump(dfm, fp)
+
+        top_feature_names = [feature[0] for feature in top_features]
+        with open('preprocessing/feature_names.pkl', 'wb') as fp:
+            pickle.dump(top_feature_names, fp)
+    
 

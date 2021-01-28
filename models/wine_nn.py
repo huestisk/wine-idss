@@ -7,139 +7,152 @@ import pickle
 import keras
 from keras.regularizers import l2
 from keras.models import Sequential
-from keras.layers import Dense, Dropout
+from keras.layers import Dense, Dropout, BatchNormalization
 
 from sklearn.preprocessing import LabelEncoder
 from sklearn.model_selection import train_test_split
 
-LABELS = "data/labels.p"
-TRAINING_DATA = "data/dfm_words.p"
-TARGETS = "variety"
+ORIGINAL_DATA = "data/data.pkl"
+TRAINING_DATA = "data/dfm.pkl"
+OUTPUT_ROOT = "models/model_"
+
+REMOVE_NANS = True
+
 
 class WineNN:
-  
-  def __init__(self, targets):
 
-    self.targets = targets
-    self.encoder = LabelEncoder()
-    self.input_size = None
-    self.num_classes = None
+    def __init__(self, targets):
 
-    # training data
-    self.X_train = self.X_test = self.y_train = self.y_test = []
+        self.targets = targets
+        self.encoder = LabelEncoder()
+        self.input_size = None
+        self.num_classes = None
 
-    try:
-      # load model
-      self.model = keras.models.load_model("output/model_" + self.targets)
-      self.input_size = self.model.layers[0].input_shape[1]
+        try:  # FIXME
+            # load model
+            self.model = keras.models.load_model(OUTPUT_ROOT + self.targets)
+            self.input_size = self.model.layers[0].input_shape[1]
 
-      # create image
-      # keras.utils.plot_model(self.model, to_file='images/model.png', show_shapes=True)
+            # create image
+            # keras.utils.plot_model(self.model, to_file='images/model.png', show_shapes=True)
 
-      # load labels
-      with open ("data/labels.p", 'rb') as fp:
-        tmp_labels = pickle.load(fp)
-        nan_idx = tmp_labels[self.targets].isnull()
+            # load labels - TODO: Save encoder separately
+            with open(ORIGINAL_DATA, 'rb') as fp:
+                labels = (pickle.load(fp))[self.targets]
 
-      # convert to array and remove nan
-      tmp_labels = tmp_labels.loc[nan_idx==0][self.targets]
+            if REMOVE_NANS:
+                labels = labels.loc[labels.isnull() == 0]
 
-      # convert to onehot
-      self.encoder.fit(tmp_labels.values)
+            # convert to onehot
+            self.encoder.fit(labels.values)
 
-      # set trained
-      self.trained = True
+            # set trained
+            self.trained = True
 
-    except:
-      self.trained = False
+        except:
+            self.trained = False
+            print("No model was loaded.")
+            self.load_data()
+            print("The training data was loaded.")
+
+    def load_data(self):
+        # load features
+        with open(TRAINING_DATA, 'rb') as fp:
+            X = pickle.load(fp)
+
+        # load labels
+        with open(ORIGINAL_DATA, 'rb') as fp:
+            labels = (pickle.load(fp))[self.targets]
+
+        # convert to array and remove nan
+        if REMOVE_NANS:
+            nan_idx = labels.isnull()
+            print("Removing " + str(sum(nan_idx)) +
+                  " data points with NaN labels.")
+            labels = labels.loc[nan_idx == 0]
+            X = (X.values)[nan_idx == 0]
+
+        # convert labels to onehot
+        self.encoder.fit(labels.values)
+        encoded_y = self.encoder.transform(labels.values)
+
+        y = keras.utils.to_categorical(encoded_y)
+
+        self.input_size = X.shape[1]
+        self.num_classes = y.shape[1]
+
+        # split data
+        self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
+            X, y, test_size=0.33)
+
+    def create_model(self):
+
+        self.trained = False
+
+        # make model
+        self.model = Sequential()
+        self.model.add(
+            Dense(512, input_dim=self.input_size, activation='sigmoid'))
+        self.model.add(BatchNormalization())
+        self.model.add(Dropout(0.3))
+        self.model.add(Dense(256, activation='relu'))
+        self.model.add(BatchNormalization())
+        self.model.add(Dropout(0.4))
+        self.model.add(Dense(128, activation='sigmoid'))
+        self.model.add(Dropout(0.5))
+        self.model.add(BatchNormalization())
+        self.model.add(Dense(256, activation='relu'))
+        self.model.add(BatchNormalization())
+        self.model.add(Dropout(0.4))
+        self.model.add(BatchNormalization())
+        self.model.add(Dense(512, activation='sigmoid'))
+        self.model.add(Dropout(0.3))
+        self.model.add(Dense(self.num_classes, activation='softmax'))
+
+        # compile
+        self.model.compile(optimizer='adam',
+                           loss='categorical_crossentropy',
+                           metrics=['accuracy'])
+
+    def train(self, verbose=False):
+
+        if self.trained:
+            print("Model has already been trained.")
+            return
+
+        history = self.model.fit(
+            self.X_train,
+            self.y_train,
+            batch_size=64,
+            epochs=25,
+            validation_split=0.2,
+            use_multiprocessing=True,
+            verbose=verbose
+        )
+
+        self.trained = True
+
+        # Save
+        self.model.save(OUTPUT_ROOT + self.targets)
+
+        result = self.model.evaluate(self.X_test, self.y_test, batch_size=64)
+        if verbose:
+            print("test loss, test acc:", result)
+
+        return history, result
+
+    def predict(self, features):
+        if not self.trained:
+            raise Exception("Model not trained.")
+
+        input_features = features.reshape(1, self.input_size)
+        prediction = self.model.predict(input_features)
+
+        # return self.encoder.inverse_transform([np.argmax(prediction)])[0]
+        return [self.encoder.classes_, prediction]
 
 
-  def create_model(self):
-    
-    self.trained = False
-
-    # make model
-    self.model = Sequential()
-    self.model.add(Dense(500, input_dim=self.input_size, activation='relu'))
-    self.model.add(Dropout(0.2))
-    self.model.add(Dense(300, activation='sigmoid'))
-    self.model.add(Dropout(0.2))
-    self.model.add(Dense(250, activation='relu'))
-    self.model.add(Dropout(0.2))
-    self.model.add(Dense(150, activation='sigmoid'))
-    self.model.add(Dropout(0.2))
-    self.model.add(Dense(250, activation='relu'))
-    self.model.add(Dropout(0.2))
-    self.model.add(Dense(300, activation='sigmoid'))
-    self.model.add(Dropout(0.2))
-    self.model.add(Dense(500, activation='relu'))
-    self.model.add(Dropout(0.2))
-    self.model.add(Dense(self.num_classes, activation='softmax'))
-
-    # compile
-    self.model.compile(optimizer='adam',
-                      loss='categorical_crossentropy',
-                      metrics=['accuracy'])
-      
-
-  def load_data(self, data_path, label_path):
-
-    try:
-      # load data
-      with open (data_path, 'rb') as fp:
-        tmp_data = pickle.load(fp)
-        # check for NaN values
-        if tmp_data.isnull().values.any():
-          raise Exception("Features contain NaN values.")
-
-      # load labels
-      with open (label_path, 'rb') as fp:
-        tmp_labels = pickle.load(fp)
-        nan_idx = tmp_labels[self.targets].isnull()
-
-      # convert to array and remove nan
-      tmp_labels = tmp_labels.loc[nan_idx==0][self.targets]
-      X = (tmp_data.values)[nan_idx==0]
-
-      # convert to onehot
-      self.encoder.fit(tmp_labels.values)
-      encoded_y = self.encoder.transform(tmp_labels.values)
-
-      y = keras.utils.to_categorical(encoded_y)
-
-      self.input_size = X.shape[1]
-      self.num_classes = y.shape[1]
-
-      # split data
-      self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, test_size=0.33)
-
-    except:
-      raise Exception("Data could not be loaded.")
-
-  def train(self, verbose=False):
-
-    if self.trained:
-      return
-
-    history = self.model.fit(
-        self.X_train, 
-        self.y_train,
-        batch_size=64,
-        epochs=25,
-        validation_split=0.2,
-        use_multiprocessing=True,
-        verbose=verbose
-      )
-
-    self.trained = True
-
-    results = self.model.evaluate(self.X_test, self.y_test, batch_size=64)
-    print("test loss, test acc:", results)
-
-    if verbose:
-      self.plot_history(history)
-
-  def plot_history(self, history):
+def plot_history(history):
 
     # summarize history for accuracy
     plt.plot(history.history['accuracy'])
@@ -159,36 +172,17 @@ class WineNN:
     plt.legend(['train', 'validation'])
     plt.show()
 
-  def save(self, file_path):
-    self.model.save(file_path)
 
-  def predict(self, features):
-    if not self.trained:
-      raise Exception("Model not trained.")
+if __name__ == "__main__":
 
-    input_features = features.reshape(1, self.input_size)
-    prediction = self.model.predict(input_features)
+    targets = ['variety', 'province']
+    histories = []
 
-    # return self.encoder.inverse_transform([np.argmax(prediction)])[0]
-    return [self.encoder.classes_, prediction]
+    for target in targets:
+        model = WineNN(target)
+        model.create_model()
+        history, results = model.train(verbose=True)
+        histories.append((history, results))
 
-
-if __name__=="__main__":
-  
-  model = WineNN(TARGETS)
-
-  if not model.trained:
-
-    # load data
-    model.load_data(TRAINING_DATA, LABELS)
-
-    # train model
-    model.create_model()
-    model.train(verbose=True)
-
-    # save
-    model.save("output/model_" + TARGETS)
-
-  # # use model to predict
-  # features = []
-  # prediction = model.predict(features)
+    with open('models/histories.pkl', 'wb') as fp:
+        pickle.dump(histories, fp)

@@ -6,15 +6,15 @@ import time
 from recommend_wine import WineRecommender
 
 # Wine Recommender Class
-data = pd.read_csv('data/winemag-data-130k-v2.csv')
-wine_recommender = WineRecommender(data)
+wine_recommender = WineRecommender()
 
 # Streamlit app
 st.title('Wine Decision Support System')
 st.write("**Enter a description of a wine and we will suggest you wines that you may like.**")
 user_input = st.text_input('Describe your favorite wine')
 
-_price_range = np.unique(np.round(np.logspace(-1, np.log10(3300), 200)))
+max_price = wine_recommender.data['price'].max()
+_price_range = np.unique(np.round(np.logspace(-1, np.log10(max_price), 500)))
 price_range = st.select_slider(
     'What is your price range ?',
     options=list(_price_range),
@@ -36,4 +36,3 @@ if st.button('Run'):
     st.write('Here is a collection of similar wines:')
     
     st.table(result.assign(hack='').set_index('hack'))
-    # st.table(result)
